@@ -23,4 +23,5 @@ export interface Block {
   hasInput?: boolean
   placeholder?: string
   value: string
+  groupId: number
 }
