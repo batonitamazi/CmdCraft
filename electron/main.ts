@@ -1,7 +1,8 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { executeShellCommand } from '../src/utils/shellExecutor'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -31,6 +32,8 @@ function createWindow() {
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
+      nodeIntegration: false,
+      contextIsolation: true,
     },
   })
 
@@ -46,6 +49,17 @@ function createWindow() {
     win.loadFile(path.join(RENDERER_DIST, 'index.html'))
   }
 }
+
+// IPC Handler for shell command execution
+ipcMain.handle('execute-command', async (event, command: string) => {
+  try {
+    const output = await executeShellCommand(command)
+    return { success: true, output }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    return { success: false, error: message }
+  }
+})
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits

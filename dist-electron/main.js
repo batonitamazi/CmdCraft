@@ -1,7 +1,28 @@
-import { app, BrowserWindow } from "electron";
+import { ipcMain, app, BrowserWindow } from "electron";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { exec } from "child_process";
+import { promisify } from "util";
+import os from "os";
+const execPromise = promisify(exec);
+const executeShellCommand = async (command) => {
+  try {
+    const platform = os.platform();
+    let finalCommand = command;
+    if (platform === "win32") {
+      finalCommand = `cmd /c ${command}`;
+    }
+    const { stdout, stderr } = await execPromise(finalCommand);
+    if (stderr) {
+      throw new Error(stderr);
+    }
+    return stdout.trim();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Command execution failed: ${message}`);
+  }
+};
 createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname, "..");
@@ -14,7 +35,9 @@ function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
-      preload: path.join(__dirname, "preload.mjs")
+      preload: path.join(__dirname, "preload.mjs"),
+      nodeIntegration: false,
+      contextIsolation: true
     }
   });
   win.webContents.on("did-finish-load", () => {
@@ -26,6 +49,15 @@ function createWindow() {
     win.loadFile(path.join(RENDERER_DIST, "index.html"));
   }
 }
+ipcMain.handle("execute-command", async (event, command) => {
+  try {
+    const output = await executeShellCommand(command);
+    return { success: true, output };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message };
+  }
+});
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();

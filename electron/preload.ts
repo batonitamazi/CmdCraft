@@ -18,7 +18,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     const [channel, ...omit] = args
     return ipcRenderer.invoke(channel, ...omit)
   },
-
+  executeCommand: (command: string) => ipcRenderer.invoke('execute-command', command)
   // You can expose other APTs you need here.
   // ...
 })

@@ -6,6 +6,7 @@ import Sidebar from './components/Sidebar'
 import Canvas from './components/Canvas'
 import Output from './components/Output'
 import SaveScriptModal from './components/SaveScriptModal'
+import { executeShellCommand } from './utils/shellExecutor'
 
 function App() {
   const [canvasBlocks, setCanvasBlocks] = useState<Block[]>([])
@@ -150,7 +151,30 @@ function App() {
 
   const updateBlockValue = (id: number, value: string) => setCanvasBlocks(prev => prev.map(b => b.id === id ? { ...b, value } : b))
   const clearCanvas = () => { setCanvasBlocks([]); setOutputLines(['Ready to execute commands...']) }
-  const executeCommand = () => { const command = generateCommand(); if (!command) return; setOutputLines(prev => [...prev, `$ ${command}`, 'Command would be executed here (demo only)']) }
+ const executeCommand = async () => {
+  const command = generateCommand();
+    if (!command) return;
+
+    setOutputLines(prev => [...prev, `$ ${command}`]);
+
+    try {
+    const api = (window as any).ipcRenderer; 
+      
+      if (api && typeof api.executeCommand === 'function') {
+        const result = await api.executeCommand(command);
+        
+        if (result.success) {
+          setOutputLines(prev => [...prev, result.output || 'Command executed successfully']);
+        } else {
+          setOutputLines(prev => [...prev, `Error: ${result.error}`]);
+        }
+      } else {
+        setOutputLines(prev => [...prev, 'Electron API not available (running in browser)']);
+      }
+    } catch (err) {
+      setOutputLines(prev => [...prev, `Execution error: ${err}`]);
+    }
+  };
   const toggleCategory = (name: string) => { setExpandedCategories(prev => { const newSet = new Set(prev); newSet.has(name) ? newSet.delete(name) : newSet.add(name); return newSet }) }
 
   const handleDragStart = (e: React.DragEvent, type: string, data: any) => {
