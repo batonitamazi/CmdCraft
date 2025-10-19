@@ -9,6 +9,7 @@ interface CanvasProps {
   updateBlockValue: (id: number, value: string) => void
   removeBlock: (id: number) => void
   clearCanvas: () => void
+  onOpenSaveModal: () => void
 }
 
 const Canvas: React.FC<CanvasProps> = ({
@@ -18,7 +19,8 @@ const Canvas: React.FC<CanvasProps> = ({
   handleDrop,
   updateBlockValue,
   removeBlock,
-  clearCanvas
+  clearCanvas,
+  onOpenSaveModal
 }) => {
   return (
     <div style={{
@@ -38,19 +40,40 @@ const Canvas: React.FC<CanvasProps> = ({
         alignItems: 'center'
       }}>
         <h2 style={{ color: '#66d9ef', fontSize: '20px', fontWeight: 600 }}>🎨 Visual Builder</h2>
-        <button
-          onClick={clearCanvas}
-          style={{
-            padding: '10px 20px',
-            background: 'linear-gradient(135deg, #bf616a 0%, #a54e56 100%)',
-            border: 'none',
-            borderRadius: '12px',
-            color: 'white',
-            fontWeight: 600,
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(191, 97, 106, 0.3)'
-          }}
-        >Clear Canvas</button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={onOpenSaveModal}
+            disabled={canvasBlocks.length === 0}
+            style={{
+              padding: '10px 20px',
+              background: canvasBlocks.length === 0 
+                ? 'rgba(102, 217, 239, 0.3)'
+                : 'linear-gradient(135deg, #66d9ef 0%, #5fb1ff 100%)',
+              border: 'none',
+              borderRadius: '12px',
+              color: 'white',
+              fontWeight: 600,
+              cursor: canvasBlocks.length === 0 ? 'not-allowed' : 'pointer',
+              boxShadow: canvasBlocks.length === 0 
+                ? 'none'
+                : '0 4px 12px rgba(102, 217, 239, 0.3)',
+              opacity: canvasBlocks.length === 0 ? 0.5 : 1
+            }}
+          >Save</button>
+          <button
+            onClick={clearCanvas}
+            style={{
+              padding: '10px 20px',
+              background: 'linear-gradient(135deg, #bf616a 0%, #a54e56 100%)',
+              border: 'none',
+              borderRadius: '12px',
+              color: 'white',
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(191, 97, 106, 0.3)'
+            }}
+          >Clear</button>
+        </div>
       </div>
 
       <div

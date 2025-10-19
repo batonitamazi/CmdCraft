@@ -1,5 +1,5 @@
 import React from 'react'
-import { Block, Category, Command, CommandArg } from '../types'
+import { Block, Category, CommandArg } from '../types'
 
 interface SidebarProps {
   categories: { [key: string]: Category }
@@ -9,6 +9,9 @@ interface SidebarProps {
   setSearchTerm: (term: string) => void
   handleDragStart: (e: React.DragEvent, type: string, data: any) => void
   canvasBlocks: Block[]
+  customScripts?: { name: string; blocks: Block[]; createdAt: string }[]
+  onDeleteScript?: (name: string) => void
+  onEditScript?: (name: string) => void
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -18,7 +21,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   searchTerm,
   setSearchTerm,
   handleDragStart,
-  canvasBlocks
+  canvasBlocks,
+  customScripts = [],
+  onDeleteScript,
+  onEditScript
 }) => {
   const filteredCategories = Object.entries(categories).filter(([categoryName, categoryData]) => {
     if (!searchTerm) return true
@@ -106,6 +112,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       tooltip: ''
     }
   }
+
+  // track hovered custom script index for showing edit/delete buttons
+  const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null)
 
   return (
     <div style={{
@@ -247,6 +256,122 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )
       })}
+
+      {customScripts.length > 0 && (
+        <div style={{ marginBottom: '12px' }}>
+          <div style={{
+            padding: '12px 16px',
+            background: 'linear-gradient(135deg, #b48ead 0%, #8f6f95 100%)',
+            borderRadius: '12px',
+            cursor: 'default',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontWeight: 700,
+            boxShadow: '0 4px 12px rgba(148, 114, 165, 0.15)'
+          }}>
+            <span style={{ fontSize: 18 }}>⭐</span>
+            <span>Custom Scripts</span>
+          </div>
+
+          <div style={{ marginTop: 8, marginLeft: 12 }}>
+            {customScripts.map((s, idx) => {
+              const isHovered = hoveredIndex === idx
+              return (
+                <div
+                  key={`${s.name}-${idx}`}
+                  onMouseEnter={() => setHoveredIndex(idx)}
+                  onMouseLeave={() => setHoveredIndex(null)}
+                  style={{ margin: '8px 0' }}
+                >
+                  <div
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, 'script', { name: s.name, blocks: s.blocks })}
+                    style={{
+                      padding: '12px 14px',
+                      background: isHovered ? 'rgba(68,71,90,0.65)' : 'rgba(68,71,90,0.45)',
+                      borderRadius: 10,
+                      cursor: 'grab',
+                      color: '#e6eef6',
+                      fontWeight: 600,
+                      borderLeft: '3px solid #b48ead',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px'
+                    }}
+                    title={`Saved ${s.blocks.length} blocks • ${new Date(s.createdAt).toLocaleString()}`}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '14px' }}>📦</span>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#8890a0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>{s.blocks.length} blocks</span>
+                        <span>•</span>
+                        <span>{new Date(s.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      display: 'flex',
+                      gap: '6px',
+                      opacity: isHovered ? 1 : 0,
+                      transition: 'opacity 0.2s ease',
+                      pointerEvents: isHovered ? 'auto' : 'none'
+                    }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onDragStart={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onEditScript?.(s.name) }}
+                        style={{
+                          background: 'rgba(102, 217, 239, 0.2)',
+                          border: '1px solid rgba(102, 217, 239, 0.3)',
+                          color: '#66d9ef',
+                          padding: '6px 10px',
+                          borderRadius: 8,
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                        title="Load script into canvas"
+                      >
+                        <span>✏️</span>
+                      </button>
+
+                      <button
+                        onClick={(e) => { e.stopPropagation(); if (confirm(`Delete saved script "${s.name}"?`)) onDeleteScript?.(s.name) }}
+                        style={{
+                          background: 'rgba(191, 97, 106, 0.2)',
+                          border: '1px solid rgba(191, 97, 106, 0.3)',
+                          color: '#bf616a',
+                          padding: '6px 10px',
+                          borderRadius: 8,
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                        title="Delete saved script"
+                      >
+                        <span>🗑️</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
