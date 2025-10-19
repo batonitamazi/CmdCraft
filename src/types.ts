@@ -14,6 +14,7 @@ export interface Command {
 export interface Category {
   icon: string
   commands: { [key: string]: Command }
+  isCustom?: boolean;
 }
 
 export interface Block {

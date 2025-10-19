@@ -12,6 +12,8 @@ interface SidebarProps {
   customScripts?: { name: string; blocks: Block[]; createdAt: string }[]
   onDeleteScript?: (name: string) => void
   onEditScript?: (name: string) => void
+  onEditCategory?: (name: string) => void
+  onDeleteCategory?: (name: string) => void
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -24,10 +26,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   canvasBlocks,
   customScripts = [],
   onDeleteScript,
-  onEditScript
+  onEditScript,
+  onEditCategory,
+  onDeleteCategory
 }) => {
   const filteredCategories = Object.entries(categories).filter(([categoryName, categoryData]) => {
-    console.log('categoryName:', categoryName)
     if (!searchTerm) return true
     return Object.entries(categoryData.commands).some(([cmdName, cmdData]) =>
       cmdName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -116,10 +119,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // track hovered custom script index for showing edit/delete buttons
   const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null)
+  const [hoveredCategory, setHoveredCategory] = React.useState<string | null>(null)
 
   return (
     <div style={{
-      width: '30%',
+      flex: 1,
       background: 'rgba(40, 42, 54, 0.95)',
       borderRadius: '16px',
       padding: '20px',
@@ -154,30 +158,114 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {filteredCategories.map(([categoryName, categoryData]) => {
         const isExpanded = expandedCategories.has(categoryName) || searchTerm !== ''
+        const isCustom = categoryData.isCustom === true
+        const isHovered = hoveredCategory === categoryName
 
         return (
-          <div key={categoryName} style={{ marginBottom: '12px' }}>
+          <div 
+            key={categoryName} 
+            style={{ marginBottom: '12px' }}
+            onMouseEnter={() => setHoveredCategory(categoryName)}
+            onMouseLeave={() => setHoveredCategory(null)}
+          >
             <div
               onClick={() => toggleCategory(categoryName)}
               style={{
                 padding: '12px 16px',
-                background: 'linear-gradient(135deg, #5e81ac 0%, #4c7399 100%)',
+                background: isCustom 
+                  ? 'linear-gradient(135deg, #b48ead 0%, #8f6f95 100%)'
+                  : 'linear-gradient(135deg, #5e81ac 0%, #4c7399 100%)',
                 borderRadius: '12px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'space-between',
                 gap: '10px',
                 fontWeight: 600,
-                boxShadow: '0 4px 12px rgba(94, 129, 172, 0.3)',
+                boxShadow: isCustom
+                  ? '0 4px 12px rgba(180, 142, 173, 0.3)'
+                  : '0 4px 12px rgba(94, 129, 172, 0.3)',
                 transition: 'all 0.3s ease'
               }}
             >
-              <span style={{
-                fontSize: '18px',
-                transition: 'transform 0.3s ease',
-                transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'
-              }}>▶</span>
-              <span>{categoryData.icon} {categoryName}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+                <span style={{
+                  fontSize: '18px',
+                  transition: 'transform 0.3s ease',
+                  transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'
+                }}>▶</span>
+                <span>{categoryData.icon} {categoryName}</span>
+                {isCustom && (
+                  <span style={{
+                    padding: '2px 8px',
+                    background: 'rgba(163, 190, 140, 0.3)',
+                    borderRadius: '6px',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    color: '#a3be8c'
+                  }}>
+                    CUSTOM
+                  </span>
+                )}
+              </div>
+
+              {isCustom && (
+                <div 
+                  style={{
+                    display: 'flex',
+                    gap: '6px',
+                    opacity: isHovered ? 1 : 0,
+                    transition: 'opacity 0.2s ease'
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onEditCategory?.(categoryName)
+                    }}
+                    style={{
+                      background: 'rgba(102, 217, 239, 0.3)',
+                      border: '1px solid rgba(102, 217, 239, 0.5)',
+                      color: '#66d9ef',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    title="Edit category"
+                  >
+                    ✏️
+                  </button>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDeleteCategory?.(categoryName)
+                    }}
+                    style={{
+                      background: 'rgba(191, 97, 106, 0.3)',
+                      border: '1px solid rgba(191, 97, 106, 0.5)',
+                      color: '#bf616a',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    title="Delete category"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              )}
             </div>
 
             {isExpanded && (

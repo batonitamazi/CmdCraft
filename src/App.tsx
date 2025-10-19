@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import './App.css'
 import { commandsData } from './data/commandsData'
-import { Block } from './types'
+import { Block, Category } from './types'
 import Sidebar from './components/Sidebar'
 import Canvas from './components/Canvas'
 import Output from './components/Output'
 import SaveScriptModal from './components/SaveScriptModal'
+import { CategoryEditorModal } from './components/CategoryEditorModal'
 
 function App() {
   const [canvasBlocks, setCanvasBlocks] = useState<Block[]>([])
@@ -17,6 +18,87 @@ function App() {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false)
   const [customScripts, setCustomScripts] = useState<{ name: string; blocks: Block[]; createdAt: string }[]>([])
   const [editingScriptName, setEditingScriptName] = useState<string | null>(null)
+  
+  // Merge commandsData with custom categories
+  const [categories, setCategories] = useState<{ [key: string]: Category }>(commandsData);
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<{ name: string; data: Category } | undefined>();
+
+  // Load custom categories on mount
+  useEffect(() => {
+    const api = (window as any).api || (window as any).electronAPI
+    if (api && typeof api.getCustomCategories === 'function') {
+      api.getCustomCategories().then((customCats: { [key: string]: Category }) => {
+        if (customCats) {
+          setCategories(prev => ({ ...prev, ...customCats }))
+        }
+      }).catch(() => {
+        const existing = JSON.parse(localStorage.getItem('customCategories') || '{}')
+        setCategories(prev => ({ ...prev, ...existing }))
+      })
+    } else {
+      const existing = JSON.parse(localStorage.getItem('customCategories') || '{}')
+      setCategories(prev => ({ ...prev, ...existing }))
+    }
+  }, [])
+
+  const persistCustomCategories = async (customCats: { [key: string]: Category }) => {
+    const api = (window as any).api || (window as any).electronAPI
+    try {
+      if (api && typeof api.saveCustomCategories === 'function') {
+        await api.saveCustomCategories(customCats)
+      } else {
+        localStorage.setItem('customCategories', JSON.stringify(customCats))
+      }
+    } catch (err) {
+      console.error('persistCustomCategories error', err)
+      localStorage.setItem('customCategories', JSON.stringify(customCats))
+    }
+  }
+
+  const handleSaveCategory = async (categoryName: string, category: Category) => {
+    setCategories(prev => ({
+      ...prev,
+      [categoryName]: category
+    }));
+    
+    // Save only custom categories
+    const customCats = Object.fromEntries(
+      Object.entries({ ...categories, [categoryName]: category })
+        .filter(([_, cat]) => cat.isCustom)
+    )
+    await persistCustomCategories(customCats)
+    
+    setEditingCategory(undefined);
+    setOutputLines(prev => [...prev, `Saved category "${categoryName}".`])
+  };
+
+  const handleDeleteCategory = async (categoryName: string) => {
+    if (confirm(`Delete category "${categoryName}"?`)) {
+      setCategories(prev => {
+        const updated = { ...prev };
+        delete updated[categoryName];
+        return updated;
+      });
+      
+      const customCats = Object.fromEntries(
+        Object.entries(categories)
+          .filter(([name, cat]) => cat.isCustom && name !== categoryName)
+      )
+      await persistCustomCategories(customCats)
+      
+      setOutputLines(prev => [...prev, `Deleted category "${categoryName}".`])
+    }
+  };
+
+  const handleEditCategory = (categoryName: string) => {
+    setEditingCategory({
+      name: categoryName,
+      data: categories[categoryName]
+    });
+    setIsModalOpen(true);
+  };
 
   useEffect(() => {
     const api = (window as any).api || (window as any).electronAPI
@@ -76,7 +158,7 @@ function App() {
   const addCommandBlock = (commandName: string) => {
     const lastCommandBlock = [...canvasBlocks].reverse().find(b => b.type === 'command')
     if (lastCommandBlock) {
-      const commandDef = Object.values(commandsData)
+      const commandDef = Object.values(categories)
         .flatMap(cat => Object.entries(cat.commands))
         .find(([name]) => name === lastCommandBlock.command)?.[1]
 
@@ -326,56 +408,121 @@ function App() {
   }
 
   const openFileDialog = async (): Promise<string | undefined> => {
-  const api = (window as any).api || (window as any).electronAPI || (window as any).ipcRenderer;
+    const api = (window as any).api || (window as any).electronAPI || (window as any).ipcRenderer;
 
-  try {
-    if (api && typeof api.openFileDialog === 'function') {
-      // ✅ Ask Electron main process to open a dialog that allows both files and folders
-      return await api.openFileDialog({
-        allowDirectories: true,
-        allowFiles: true,
+    try {
+      if (api && typeof api.openFileDialog === 'function') {
+        return await api.openFileDialog({
+          allowDirectories: true,
+          allowFiles: true,
+        });
+      }
+
+      return await new Promise<string | undefined>((resolve) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.style.display = 'none';
+
+        input.onchange = () => {
+          const file = input.files && input.files[0];
+          if (!file) return resolve(undefined);
+          resolve(file.name);
+        };
+
+        document.body.appendChild(input);
+        input.click();
+        setTimeout(() => document.body.removeChild(input), 2000);
       });
+    } catch (err) {
+      console.error('openFileDialog error', err);
+      return undefined;
     }
-
-    // Browser fallback — choose files only (browsers can’t do both)
-    return await new Promise<string | undefined>((resolve) => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.style.display = 'none';
-
-      input.onchange = () => {
-        const file = input.files && input.files[0];
-        if (!file) return resolve(undefined);
-        resolve(file.name);
-      };
-
-      document.body.appendChild(input);
-      input.click();
-      setTimeout(() => document.body.removeChild(input), 2000);
-    });
-  } catch (err) {
-    console.error('openFileDialog error', err);
-    return undefined;
-  }
-};
+  };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', padding: '12px', gap: '12px', background: 'linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%)', color: '#e0e0e0', fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>
-      <Sidebar
-        categories={commandsData}
-        expandedCategories={expandedCategories}
-        toggleCategory={toggleCategory}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        handleDragStart={handleDragStart}
-        canvasBlocks={canvasBlocks}
-        customScripts={customScripts}
-        onDeleteScript={handleDeleteScript}
-        onEditScript={handleEditScript}
-      />
+    <div style={{ 
+      display: 'flex', 
+      height: '100vh', 
+      padding: '12px', 
+      gap: '12px', 
+      background: 'linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%)', 
+      color: '#e0e0e0', 
+      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" 
+    }}>
+      {/* Left Column - Sidebar with Add Button on top */}
+      <div style={{ 
+        width: '30%', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '12px' 
+      }}>
+        <button
+          onClick={() => {
+            setEditingCategory(undefined);
+            setIsModalOpen(true);
+          }}
+          style={{
+            padding: '14px 24px',
+            background: 'linear-gradient(135deg, #a3be8c 0%, #8fa876 100%)',
+            border: 'none',
+            borderRadius: '12px',
+            color: '#1e1e2e',
+            fontSize: '16px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: '0 4px 16px rgba(163, 190, 140, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 6px 20px rgba(163, 190, 140, 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 4px 16px rgba(163, 190, 140, 0.3)';
+          }}
+        >
+          ➕ Add Category
+        </button>
+
+        <Sidebar
+          categories={categories}
+          expandedCategories={expandedCategories}
+          toggleCategory={toggleCategory}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          handleDragStart={handleDragStart}
+          canvasBlocks={canvasBlocks}
+          customScripts={customScripts}
+          onDeleteScript={handleDeleteScript}
+          onEditScript={handleEditScript}
+          onEditCategory={handleEditCategory}
+          onDeleteCategory={handleDeleteCategory}
+        />
+      </div>
+
+      {/* Right Column - Canvas and Output */}
       <div style={{ width: '70%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <Canvas canvasBlocks={canvasBlocks} isDragOver={isDragOver} setIsDragOver={setIsDragOver} handleDrop={handleDrop} updateBlockValue={updateBlockValue} removeBlock={removeBlock} clearCanvas={clearCanvas} openFileDialog={openFileDialog} onOpenSaveModal={() => { setEditingScriptName(null); setIsSaveModalOpen(true) } } />
-        <Output outputLines={outputLines} commandPreview={commandPreview} executeCommand={executeCommand} />
+        <Canvas 
+          canvasBlocks={canvasBlocks} 
+          isDragOver={isDragOver} 
+          setIsDragOver={setIsDragOver} 
+          handleDrop={handleDrop} 
+          updateBlockValue={updateBlockValue} 
+          removeBlock={removeBlock} 
+          clearCanvas={clearCanvas} 
+          openFileDialog={openFileDialog} 
+          onOpenSaveModal={() => { setEditingScriptName(null); setIsSaveModalOpen(true) }} 
+        />
+        <Output 
+          outputLines={outputLines} 
+          commandPreview={commandPreview} 
+          executeCommand={executeCommand} 
+        />
       </div>
 
       <SaveScriptModal
@@ -385,7 +532,18 @@ function App() {
         onSave={handleSaveScript}
         initialName={editingScriptName ?? undefined}
       />
+      
+      <CategoryEditorModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingCategory(undefined);
+        }}
+        onSave={handleSaveCategory}
+        editingCategory={editingCategory}
+      />
     </div>
   )
 }
+
 export default App
