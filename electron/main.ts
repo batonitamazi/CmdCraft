@@ -1,10 +1,10 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
-import { createRequire } from 'node:module'
+import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+// import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { executeShellCommand } from '../src/utils/shellExecutor'
 
-const require = createRequire(import.meta.url)
+// const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // The built directory structure
@@ -50,14 +50,52 @@ function createWindow() {
   }
 }
 
+
 // IPC Handler for shell command execution
 ipcMain.handle('execute-command', async (event, command: string) => {
   try {
+    console.log(event);
     const output = await executeShellCommand(command)
     return { success: true, output }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error)
     return { success: false, error: message }
+  }
+})
+ipcMain.handle('open-file-dialog', async (event, opts?: { allowDirectories?: boolean; allowFiles?: boolean }) => {
+  const properties: Array<'openFile' | 'openDirectory' | 'multiSelections'> = []
+  
+  if (opts?.allowFiles) {
+    properties.push('openFile')
+  }
+  
+  if (opts?.allowDirectories) {
+    properties.push('openDirectory')
+  }
+  
+  // Default to both if nothing specified
+  if (properties.length === 0) {
+    properties.push('openFile', 'openDirectory')
+  }
+
+  try {
+    const result = await dialog.showOpenDialog({
+      properties,
+      title: opts?.allowDirectories && opts?.allowFiles 
+        ? 'Select a file or folder' 
+        : opts?.allowDirectories 
+        ? 'Select a folder' 
+        : 'Select a file'
+    })
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return undefined
+    }
+
+    return result.filePaths[0]
+  } catch (error) {
+    console.error('Dialog error:', error)
+    return undefined
   }
 })
 

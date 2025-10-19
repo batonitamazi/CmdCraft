@@ -27,6 +27,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onEditScript
 }) => {
   const filteredCategories = Object.entries(categories).filter(([categoryName, categoryData]) => {
+    console.log('categoryName:', categoryName)
     if (!searchTerm) return true
     return Object.entries(categoryData.commands).some(([cmdName, cmdData]) =>
       cmdName.toLowerCase().includes(searchTerm.toLowerCase()) ||

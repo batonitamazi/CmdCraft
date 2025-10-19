@@ -8,7 +8,8 @@ interface OutputProps {
 
 const Output: React.FC<OutputProps> = ({ outputLines, commandPreview, executeCommand }) => (
   <div style={{
-    flex: '0 0 calc(30% - 12px)',
+    flex: '1',
+    minHeight: '300px',
     background: 'rgba(40,42,54,0.95)',
     borderRadius: '16px',
     padding: '20px',

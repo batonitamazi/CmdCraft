@@ -17,7 +17,6 @@ electron.contextBridge.exposeInMainWorld("ipcRenderer", {
     const [channel, ...omit] = args;
     return electron.ipcRenderer.invoke(channel, ...omit);
   },
-  executeCommand: (command) => electron.ipcRenderer.invoke("execute-command", command)
-  // You can expose other APTs you need here.
-  // ...
+  executeCommand: (command) => electron.ipcRenderer.invoke("execute-command", command),
+  openFileDialog: (opts) => electron.ipcRenderer.invoke("open-file-dialog", opts)
 });

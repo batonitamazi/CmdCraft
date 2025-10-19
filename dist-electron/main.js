@@ -1,5 +1,4 @@
-import { ipcMain, app, BrowserWindow } from "electron";
-import { createRequire } from "node:module";
+import { ipcMain, dialog, app, BrowserWindow } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { exec } from "child_process";
@@ -23,7 +22,6 @@ const executeShellCommand = async (command) => {
     throw new Error(`Command execution failed: ${message}`);
   }
 };
-createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -51,11 +49,37 @@ function createWindow() {
 }
 ipcMain.handle("execute-command", async (event, command) => {
   try {
+    console.log(event);
     const output = await executeShellCommand(command);
     return { success: true, output };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return { success: false, error: message };
+  }
+});
+ipcMain.handle("open-file-dialog", async (event, opts) => {
+  const properties = [];
+  if (opts == null ? void 0 : opts.allowFiles) {
+    properties.push("openFile");
+  }
+  if (opts == null ? void 0 : opts.allowDirectories) {
+    properties.push("openDirectory");
+  }
+  if (properties.length === 0) {
+    properties.push("openFile", "openDirectory");
+  }
+  try {
+    const result = await dialog.showOpenDialog({
+      properties,
+      title: (opts == null ? void 0 : opts.allowDirectories) && (opts == null ? void 0 : opts.allowFiles) ? "Select a file or folder" : (opts == null ? void 0 : opts.allowDirectories) ? "Select a folder" : "Select a file"
+    });
+    if (result.canceled || result.filePaths.length === 0) {
+      return void 0;
+    }
+    return result.filePaths[0];
+  } catch (error) {
+    console.error("Dialog error:", error);
+    return void 0;
   }
 });
 app.on("window-all-closed", () => {

@@ -8,7 +8,7 @@ interface SaveScriptModalProps {
   initialName?: string
 }
 
-const SaveScriptModal: React.FC<SaveScriptModalProps> = ({ isOpen, onClose, canvasBlocks, onSave, initialName }) => {
+const SaveScriptModal: React.FC<SaveScriptModalProps> = ({ isOpen, onClose, onSave, initialName }) => {
   const [name, setName] = useState('')
 
   useEffect(() => {

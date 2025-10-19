@@ -10,12 +10,12 @@ export const commandsData: { [key: string]: Category } = {
           { name: '-l', desc: 'Long format', hasInput: false },
           { name: '-a', desc: 'Show hidden files', hasInput: false },
           { name: '-h', desc: 'Human readable sizes', hasInput: false },
-          { name: 'path', desc: 'Directory path', hasInput: true, placeholder: '/path/to/dir' }
+          { name: 'path', desc: 'Directory path', hasInput: true, placeholder: '/path/to/dir', openFileDialog: true }
         ]
       },
       'cd': {
         desc: 'Change directory',
-        args: [{ name: 'path', desc: 'Directory path', hasInput: true, placeholder: '/path/to/dir' }]
+        args: [{ name: 'path', desc: 'Directory path', hasInput: true, placeholder: '/path/to/dir', openFileDialog: true }]
       },
       'pwd': { desc: 'Print working directory', args: [] },
       'mkdir': {

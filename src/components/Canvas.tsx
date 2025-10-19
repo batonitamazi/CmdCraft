@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Block } from '../types'
 
 interface CanvasProps {
@@ -10,6 +10,7 @@ interface CanvasProps {
   removeBlock: (id: number) => void
   clearCanvas: () => void
   onOpenSaveModal: () => void
+  openFileDialog: () => Promise<string | undefined>; // New prop for opening file dialog
 }
 
 const Canvas: React.FC<CanvasProps> = ({
@@ -20,16 +21,30 @@ const Canvas: React.FC<CanvasProps> = ({
   updateBlockValue,
   removeBlock,
   clearCanvas,
-  onOpenSaveModal
+  onOpenSaveModal,
+  openFileDialog // Destructure the new prop
 }) => {
+  const handleInputClick = async (blockId: number) => {
+    const block = canvasBlocks.find(b => b.id === blockId);
+    if (block && block.hasInput) {
+      const selectedPath = await openFileDialog(); // Open file dialog
+      if (selectedPath) {
+        updateBlockValue(blockId, selectedPath); // Update block value with selected path
+      }
+    }
+  };
+
   return (
+    // 1. Make the main container a vertical flexbox
     <div style={{
-      flex: '0 0 70%',
+      flex: '1', // Changed to flex: 1 for better responsiveness
       background: 'rgba(40, 42, 54, 0.95)',
       borderRadius: '16px',
       padding: '20px',
       boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-      overflow: 'auto'
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden' // Hide overflow from this parent container
     }}>
       <div style={{
         marginBottom: '20px',
@@ -76,12 +91,14 @@ const Canvas: React.FC<CanvasProps> = ({
         </div>
       </div>
 
+      {/* 2. Make the canvas area flexible and scrollable */}
       <div
         onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
         onDragLeave={() => setIsDragOver(false)}
         onDrop={handleDrop}
         style={{
-          minHeight: '400px',
+          flex: 1, // Allow this container to grow and fill available space
+          overflowY: 'scroll', // Add a vertical scrollbar only when needed
           background: isDragOver
             ? 'rgba(102, 217, 239, 0.1)'
             : 'linear-gradient(135deg, rgba(68, 71, 90, 0.3) 0%, rgba(58, 61, 80, 0.3) 100%)',
@@ -102,7 +119,10 @@ const Canvas: React.FC<CanvasProps> = ({
             textAlign: 'center',
             color: '#6272a4',
             fontSize: '16px',
-            padding: '60px 20px'
+            padding: '60px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}>
             Drag and drop commands here to build your shell script
           </div>
@@ -132,6 +152,7 @@ const Canvas: React.FC<CanvasProps> = ({
                     placeholder={block.placeholder}
                     value={block.value}
                     onChange={(e) => updateBlockValue(block.id, e.target.value)}
+                    onClick={() => handleInputClick(block.id)}
                     style={{
                       background: 'rgba(255, 255, 255, 0.9)',
                       border: 'none',

@@ -1,12 +1,16 @@
 {
-  "name": "my-electron-app",
+  "name": "CmdCrafter",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "build:mac": "tsc && vite build && electron-builder --mac",
+    "build:mac-arm": "tsc && vite build && electron-builder --mac --arm64",
+    "build:mac-intel": "tsc && vite build && electron-builder --mac --x64",
+    "build:mac-universal": "tsc && vite build && electron-builder --mac --universal",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -28,6 +32,51 @@
     "electron-builder": "^24.13.3",
     "vite-plugin-electron": "^0.28.6",
     "vite-plugin-electron-renderer": "^0.14.5"
+  },
+  "build": {
+    "appId": "com.cmdCrafter.app",
+    "productName": "cmdCrafter",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["arm64", "x64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["arm64", "x64"]
+        }
+      ],
+      "icon": "public/icon.icns",
+      "category": "public.app-category.developer-tools",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "background": "public/dmg-background.png"
+    }
   },
   "main": "dist-electron/main.js"
 }

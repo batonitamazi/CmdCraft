@@ -3,6 +3,7 @@ export interface CommandArg {
   desc: string
   hasInput: boolean
   placeholder?: string
+  openFileDialog?: boolean
 }
 
 export interface Command {
@@ -21,7 +22,8 @@ export interface Block {
   command: string
   arg?: string
   hasInput?: boolean
-  placeholder?: string
+  placeholder?: string,
+  openFileDialog?: boolean
   value: string
   groupId: number
 }
