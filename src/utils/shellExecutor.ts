@@ -13,8 +13,11 @@ export const executeShellCommand = async (command: string): Promise<string> => {
     if (platform === 'win32') {
       finalCommand = `cmd /c ${command}`;
     }
-
-    const { stdout, stderr } = await execPromise(finalCommand);
+    const env = {
+      ...process.env,
+      PATH: process.env.PATH + ':/usr/local/bin:/opt/homebrew/bin'
+    };
+    const { stdout, stderr } = await execPromise(finalCommand, { env });
 
     if (stderr) {
       throw new Error(stderr);

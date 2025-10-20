@@ -9,6 +9,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "build:mac": "tsc && vite build && electron-builder --mac",
     "build:mac-arm": "tsc && vite build && electron-builder --mac --arm64",
+    "build:win": "tsc && vite build && electron-builder --win",
     "build:mac-intel": "tsc && vite build && electron-builder --mac --x64",
     "build:mac-universal": "tsc && vite build && electron-builder --mac --universal",
     "preview": "vite preview"
@@ -76,6 +77,25 @@
         }
       ],
       "background": "public/dmg-background.png"
+    },
+    "win": {
+  "target": [
+    {
+      "target": "nsis",
+      "arch": ["x64", "ia32"]
+    },
+    {
+      "target": "zip",
+      "arch": ["x64", "ia32"]
+    }  ],
+    "icon": "public/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "CmdCrafter"
     }
   },
   "main": "dist-electron/main.js"

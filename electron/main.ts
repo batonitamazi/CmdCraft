@@ -36,6 +36,8 @@ function createWindow() {
       contextIsolation: true,
     },
   })
+  win.webContents.openDevTools();
+
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
@@ -54,7 +56,6 @@ function createWindow() {
 // IPC Handler for shell command execution
 ipcMain.handle('execute-command', async (event, command: string) => {
   try {
-    console.log(event);
     const output = await executeShellCommand(command)
     return { success: true, output }
   } catch (error: unknown) {
@@ -116,5 +117,6 @@ app.on('activate', () => {
     createWindow()
   }
 })
+
 
 app.whenReady().then(createWindow)

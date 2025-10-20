@@ -27,9 +27,9 @@ const Canvas: React.FC<CanvasProps> = ({
   const handleInputClick = async (blockId: number) => {
     const block = canvasBlocks.find(b => b.id === blockId);
     if (block && block.hasInput) {
-      const selectedPath = await openFileDialog(); // Open file dialog
+      const selectedPath = await openFileDialog(); 
       if (selectedPath) {
-        updateBlockValue(blockId, selectedPath); // Update block value with selected path
+        updateBlockValue(blockId, selectedPath); 
       }
     }
   };
